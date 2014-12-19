@@ -1,5 +1,9 @@
 package org.jenkinsci.plugins.bitbucket_approval;
 
+import com.squareup.okhttp.Credentials;
+import com.squareup.okhttp.OkHttpClient;
+import com.squareup.okhttp.Request;
+import com.squareup.okhttp.Response;
 import hudson.Extension;
 import hudson.Launcher;
 import hudson.model.AbstractBuild;
@@ -13,8 +17,11 @@ import net.sf.json.JSONObject;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 
+import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
+@SuppressWarnings("unused") // This class will be loaded using its Descriptor.
 public class BitbucketApprover extends Notifier {
 
     private static final Logger LOG = Logger.getLogger(BitbucketApprover.class
@@ -40,9 +47,31 @@ public class BitbucketApprover extends Notifier {
 
     @Override
     public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) {
-        // TODO: execute something like this
-        // curl -u {mUser}:{mPassword} -X POST "https://api.bitbucket.org/2.0/repositories/{mOwner}/{mSlug}/commit/`git rev-parse HEAD`/approve"
-        return true;
+
+        OkHttpClient client = new OkHttpClient();
+        client.setConnectTimeout(30, TimeUnit.SECONDS);
+        client.setReadTimeout(60, TimeUnit.SECONDS);
+
+        Request.Builder builder = new Request.Builder();
+        Request request = builder.header("Authorization", getDescriptor().getBasicAuth())
+                .url(makeUrl())
+                .method("POST", null).build();
+
+        try {
+            Response response = client.newCall(request).execute();
+
+            return response.isSuccessful();
+        } catch (IOException e) {
+            e.printStackTrace(listener.getLogger());
+        }
+
+        return false;
+    }
+
+    private String makeUrl() {
+        String commitHash = ""; // TODO fetch commit hash from git
+
+        return String.format("https://api.bitbucket.org/2.0/repositories/%s/%s/commit/%s/approve", mOwner, mSlug, commitHash);
     }
 
     @Override
@@ -97,6 +126,10 @@ public class BitbucketApprover extends Notifier {
 
         public String getPassword() {
             return mPassword;
+        }
+
+        public String getBasicAuth() {
+            return Credentials.basic(mUser, mPassword);
         }
     }
 }
