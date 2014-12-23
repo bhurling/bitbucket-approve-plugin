@@ -9,6 +9,8 @@ import hudson.Launcher;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.BuildListener;
+import hudson.plugins.git.Revision;
+import hudson.plugins.git.util.BuildData;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Notifier;
@@ -18,14 +20,13 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 
 import java.io.IOException;
+import java.io.PrintStream;
+import java.net.HttpURLConnection;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 @SuppressWarnings("unused") // This class will be loaded using its Descriptor.
 public class BitbucketApprover extends Notifier {
-
-    private static final Logger LOG = Logger.getLogger(BitbucketApprover.class
-            .getName());
 
     private String mOwner;
 
@@ -47,6 +48,28 @@ public class BitbucketApprover extends Notifier {
 
     @Override
     public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) {
+        PrintStream logger = listener.getLogger();
+
+        BuildData buildData = build.getAction(BuildData.class);
+        if (buildData == null) {
+            logger.println("Could not get build data from build.");
+            return false;
+        }
+
+        Revision rev = buildData.getLastBuiltRevision();
+        if (buildData == null) {
+            logger.println("Could not get revision from build.");
+            return false;
+        }
+
+        String commitHash = rev.getSha1String();
+        if (commitHash == null) {
+            logger.println("Could not get commit hash from build data.");
+            return false;
+        }
+
+        String url = String.format("https://api.bitbucket.org/2.0/repositories/%s/%s/commit/%s/approve", mOwner, mSlug, commitHash);
+        logger.println(url);
 
         OkHttpClient client = new OkHttpClient();
         client.setConnectTimeout(30, TimeUnit.SECONDS);
@@ -54,13 +77,19 @@ public class BitbucketApprover extends Notifier {
 
         Request.Builder builder = new Request.Builder();
         Request request = builder.header("Authorization", getDescriptor().getBasicAuth())
-                .url(makeUrl())
+                .url(url)
                 .method("POST", null).build();
 
         try {
             Response response = client.newCall(request).execute();
 
-            return response.isSuccessful();
+            if (isSuccessful(response)) {
+                return true;
+            }
+
+            logger.println(response.code() + " - " + response.message());
+            logger.println(response.body().string());
+
         } catch (IOException e) {
             e.printStackTrace(listener.getLogger());
         }
@@ -68,10 +97,13 @@ public class BitbucketApprover extends Notifier {
         return false;
     }
 
-    private String makeUrl() {
-        String commitHash = ""; // TODO fetch commit hash from git
-
-        return String.format("https://api.bitbucket.org/2.0/repositories/%s/%s/commit/%s/approve", mOwner, mSlug, commitHash);
+    /**
+     * A 409 CONFLICT response means that we already approved this changeset.
+     * We do not consider that an error.
+     */
+    private boolean isSuccessful(Response response) throws IOException {
+        return response.isSuccessful() ||
+                (response.code() == HttpURLConnection.HTTP_CONFLICT && response.body().string().contains("You already approved this changeset."));
     }
 
     @Override
