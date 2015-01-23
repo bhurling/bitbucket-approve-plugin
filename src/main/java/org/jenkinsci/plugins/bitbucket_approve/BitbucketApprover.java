@@ -1,4 +1,4 @@
-package org.jenkinsci.plugins.bitbucket_approval;
+package org.jenkinsci.plugins.bitbucket_approve;
 
 import com.squareup.okhttp.Credentials;
 import com.squareup.okhttp.OkHttpClient;
@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.net.HttpURLConnection;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Logger;
 
 @SuppressWarnings("unused") // This class will be loaded using its Descriptor.
 public class BitbucketApprover extends Notifier {
@@ -52,30 +51,30 @@ public class BitbucketApprover extends Notifier {
         PrintStream logger = listener.getLogger();
 
         if (build.getResult().isWorseOrEqualTo(Result.FAILURE)) {
-            logger.println("Bitbucket Approval: Skipping because of FAILURE");
+            logger.println("Bitbucket Approve: Skipping because of FAILURE");
             return true;
         }
 
         BuildData buildData = build.getAction(BuildData.class);
         if (buildData == null) {
-            logger.println("Bitbucket Approval: Could not get build data from build.");
+            logger.println("Bitbucket Approve: Could not get build data from build.");
             return false;
         }
 
         Revision rev = buildData.getLastBuiltRevision();
         if (buildData == null) {
-            logger.println("Bitbucket Approval: Could not get revision from build.");
+            logger.println("Bitbucket Approve: Could not get revision from build.");
             return false;
         }
 
         String commitHash = rev.getSha1String();
         if (commitHash == null) {
-            logger.println("Bitbucket Approval: Could not get commit hash from build data.");
+            logger.println("Bitbucket Approve: Could not get commit hash from build data.");
             return false;
         }
 
         String url = String.format("https://api.bitbucket.org/2.0/repositories/%s/%s/commit/%s/approve", mOwner, mSlug, commitHash);
-        logger.println("Bitbucket Approval: " + url);
+        logger.println("Bitbucket Approve: " + url);
 
         OkHttpClient client = new OkHttpClient();
         client.setConnectTimeout(30, TimeUnit.SECONDS);
@@ -93,8 +92,8 @@ public class BitbucketApprover extends Notifier {
                 return true;
             }
 
-            logger.println("Bitbucket Approval: " + response.code() + " - " + response.message());
-            logger.println("Bitbucket Approval: " + response.body().string());
+            logger.println("Bitbucket Approve: " + response.code() + " - " + response.message());
+            logger.println("Bitbucket Approve: " + response.body().string());
 
         } catch (IOException e) {
             e.printStackTrace(listener.getLogger());
