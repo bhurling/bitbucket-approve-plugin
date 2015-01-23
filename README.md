@@ -1,6 +1,6 @@
 # bitbucket-approve-plugin
 
-Plugin that enables Jenkins to approve commits on Bitbucket
+Plugin that enables Jenkins to approve commits on Bitbucket. In a sense, you may compare it to how Travis and Github are working together.
 
 ## Configuration
 
