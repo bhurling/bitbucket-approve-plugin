@@ -9,6 +9,7 @@ import hudson.Launcher;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.BuildListener;
+import hudson.model.Result;
 import hudson.plugins.git.Revision;
 import hudson.plugins.git.util.BuildData;
 import hudson.tasks.BuildStepDescriptor;
@@ -50,26 +51,31 @@ public class BitbucketApprover extends Notifier {
     public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) {
         PrintStream logger = listener.getLogger();
 
+        if (build.getResult().isWorseOrEqualTo(Result.FAILURE)) {
+            logger.println("Bitbucket Approval: Skipping because of FAILURE");
+            return true;
+        }
+
         BuildData buildData = build.getAction(BuildData.class);
         if (buildData == null) {
-            logger.println("Could not get build data from build.");
+            logger.println("Bitbucket Approval: Could not get build data from build.");
             return false;
         }
 
         Revision rev = buildData.getLastBuiltRevision();
         if (buildData == null) {
-            logger.println("Could not get revision from build.");
+            logger.println("Bitbucket Approval: Could not get revision from build.");
             return false;
         }
 
         String commitHash = rev.getSha1String();
         if (commitHash == null) {
-            logger.println("Could not get commit hash from build data.");
+            logger.println("Bitbucket Approval: Could not get commit hash from build data.");
             return false;
         }
 
         String url = String.format("https://api.bitbucket.org/2.0/repositories/%s/%s/commit/%s/approve", mOwner, mSlug, commitHash);
-        logger.println(url);
+        logger.println("Bitbucket Approval: " + url);
 
         OkHttpClient client = new OkHttpClient();
         client.setConnectTimeout(30, TimeUnit.SECONDS);
@@ -87,8 +93,8 @@ public class BitbucketApprover extends Notifier {
                 return true;
             }
 
-            logger.println(response.code() + " - " + response.message());
-            logger.println(response.body().string());
+            logger.println("Bitbucket Approval: " + response.code() + " - " + response.message());
+            logger.println("Bitbucket Approval: " + response.body().string());
 
         } catch (IOException e) {
             e.printStackTrace(listener.getLogger());
