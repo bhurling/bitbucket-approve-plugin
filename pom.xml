@@ -6,7 +6,7 @@
     <version>1.532.3</version><!-- which version of Jenkins is this plugin built against? Users must have at least this Jenkins version to use this plugin. -->
   </parent>
 
-  <artifactId>bitbucket-approval</artifactId>
+  <artifactId>bitbucket-approve</artifactId>
   <version>1.0-SNAPSHOT</version>
   <packaging>hpi</packaging>
 
