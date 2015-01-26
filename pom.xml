@@ -7,8 +7,12 @@
   </parent>
 
   <artifactId>bitbucket-approve</artifactId>
-  <version>1.0-SNAPSHOT</version>
+  <version>1.0.0</version>
   <packaging>hpi</packaging>
+
+  <name>Bitbucket Approve Plugin</name>
+  <description>Approve Commits on Bitbucket after successful builds</description>
+  <url>https://wiki.jenkins-ci.org/display/JENKINS/Bitbucket+Approve+Plugin</url>
 
   <licenses>
     <license>
@@ -16,6 +20,20 @@
       <url>http://opensource.org/licenses/MIT</url>
     </license>
   </licenses>
+
+  <scm>
+    <connection>scm:git:ssh://github.com/jenkinsci/bitbucket-approve-plugin.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/jenkinsci/bitbucket-approve-plugin.git</developerConnection>
+    <url>https://github.com/jenkinsci/bitbucket-approve-plugin</url>
+  </scm>
+
+  <developers>
+    <developer>
+      <id>bhurling</id>
+      <name>Björn Hurling</name>
+      <email>hurling83@gmail.com</email>
+    </developer>
+  </developers>
 
   <!-- get every artifact through repo.jenkins-ci.org, which proxies all the artifacts that we need -->
   <repositories>
